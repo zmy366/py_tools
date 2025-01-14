@@ -142,9 +142,6 @@ def on_button_click2():
     if response == True:
         os.startfile(dir_path)
         
-    
-# 假设所有文件都在同一个目录下
-directory = 'D:\\zhangmy\\公司\\上海正集\\发票\\未报'
 m_out_directory = ''
  
  # 创建主窗口
