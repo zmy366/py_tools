@@ -1,3 +1,4 @@
+import time
 import pandas as pd
 import os
 import pdfplumber
@@ -5,6 +6,12 @@ import re
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import filedialog
+
+
+from configparser import ConfigParser
+ 
+# 创建解析器对象
+m_config = ConfigParser()
 
 # 获取发票号和金额
 def extract_invoice_data(pdf_path):
@@ -96,7 +103,9 @@ def process_pdf_files(directory_path):
     df = pd.concat([df, summary_row], ignore_index=True)
 
     # 写入Excel文件
-    output_file = os.path.join(m_out_directory, 'output.xlsx')
+    current_time = time.strftime('%Y%m%d%H%M%S', time.localtime())
+    out_directory = m_config.get('dir', 'out')
+    output_file = os.path.join(out_directory, 'output_'+current_time+'.xlsx')
     df.to_excel(output_file, index=False, engine='openpyxl')
 
     # 提示完成
@@ -112,6 +121,9 @@ def select_directory():
     entry.delete(0, tk.END)  # 清除输入框中的内容
     entry.insert(0, dir_path)
     
+    m_config.set('dir', 'src', dir_path)
+    save_config()
+    
 def on_button_click1():
     select_directory1()
 
@@ -121,11 +133,30 @@ def select_directory1():
     
     entry1.delete(0, tk.END)  # 清除输入框中的内容
     entry1.insert(0, dir_path)
-    m_out_directory = dir_path
+    
+    m_config.set('dir', 'out', dir_path)
+    save_config()
 
     
 def on_button_click2():
-    dir_path=entry.get()
+    src_dir=entry.get()
+    if check_dir(src_dir) == False :
+        return
+    
+    out_dir=entry1.get()
+    if check_dir(out_dir) == False :
+        return
+    
+    process_pdf_files(src_dir)
+    response = messagebox.askyesno("完成", f"Excel已保存，是否打开文件所在目录？")
+    if response == True:
+        os.startfile(out_dir)
+        
+def initWindows():
+    entry.insert(0, m_config.get('dir','src'))
+    entry1.insert(0, m_config.get('dir','out'))
+    
+def check_dir(dir_path):
     isOK = False
     # 检查目录是否存在
     if os.path.exists(dir_path):
@@ -135,15 +166,18 @@ def on_button_click2():
 
     if isOK == False :
         messagebox.showerror("错误", f"请输入正确的目录")
-        return
     
-    process_pdf_files(dir_path)
-    response = messagebox.askyesno("完成", f"Excel已保存，是否打开文件所在目录？")
-    if response == True:
-        os.startfile(dir_path)
-        
-m_out_directory = ''
- 
+    return isOK
+
+# 读取配置文件
+def load_config():
+    m_config.read('config.ini')
+
+ # 保存修改后的配置文件
+def save_config():
+    with open('config.ini', 'w') as config_file:
+        m_config.write(config_file)
+
  # 创建主窗口
 root = tk.Tk()
 root.title("输入发票PDF文件地址")
@@ -177,7 +211,8 @@ button2.grid(row=2, column=1, padx=10, pady=5)
 def main():
     current_path = os.getcwd()
     print(f"当前工作目录是: {current_path}")
-
+    load_config()
+    initWindows()
     # 运行主事件循环
     root.mainloop()
 
