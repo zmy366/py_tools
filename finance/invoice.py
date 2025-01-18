@@ -13,12 +13,22 @@ from configparser import ConfigParser
 # 创建解析器对象
 m_config = ConfigParser()
 
+# 含税金额
+patterns = [
+    r'（小写）¥(\d+\.\d{2})',
+    r'（小写）￥(\d+\.\d{2})',
+    r'\(小写\) ¥(\d+\.\d{2})',
+    r'\(小写\) ￥(\d+\.\d{2})',
+    
+    r'（小写）¥ (\d+\.\d{2})',
+    r'（小写）￥ (\d+\.\d{2})',
+    r'\(小写\) ¥ (\d+\.\d{2})',
+    r'\(小写\) ￥ (\d+\.\d{2})'
+]
 # 获取发票号和金额
 def extract_invoice_data(pdf_path):
     # 定义正则表达式模式
-    amount_pattern1 = r'¥\s*(\d+\.\d{2})' # 非税金额
-    amount_pattern2 = r'（小写）¥(\d+\.\d{2})'
-    amount_pattern = r'（小写）￥(\d+\.\d{2})'
+    amount_pattern = r'¥\s*(\d+\.\d{2})' # 非税金额
 
     with pdfplumber.open(pdf_path) as pdf:
         # 通常情况下，这些信息都在第一页，但可以遍历所有页面以确保正确提取
@@ -44,11 +54,15 @@ def extract_invoice_data(pdf_path):
                     continue
 
                 # 匹配金额
-                amount_match = re.search(amount_pattern, text)
-                if amount_match is None:
-                    amount_match = re.search(amount_pattern2, text)
-                if amount_match is None:
-                    amount_match = re.search(amount_pattern1, text)
+                amount_match = None
+                for p in  patterns :
+                    amount_match = re.search(p, text)
+                    if amount_match is not None:
+                        break
+
+                # 不统计非税金额
+                # if amount_match is None:
+                    # amount_match = re.search(amount_pattern, text)
                 if amount_match is None:
                     print(pdf_path + '::金额未找到')
                     continue
